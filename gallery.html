@@ -1,136 +1,30 @@
-<!doctype html>
-<html lang="en">
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Wedding Gallery</title>
-
-<!-- same font / palette as upload page -->
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&display=swap" rel="stylesheet">
-
-<style>
-  :root {
-    --page-bg: #fafafa;
-    --text-primary: #333333;
-    --accent: #5C1D13;
-    --accent-light: #d6a96e;
-    --card-bg: #ffffff;
-    --shadow-color: rgba(0,0,0,0.1);
-  }
-  body {
-    margin: 0;
-    font-family: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
-    background: var(--page-bg);
-    color: var(--text-primary);
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-  }
-  header {
-    text-align: center;
-    padding: 2rem 1rem 1rem;
-  }
-  h1 { margin: 0; font-family: 'Cormorant Garamond', serif; color: var(--accent); }
-  .back {
-    display: inline-block;
-    margin-top: .5rem;
-    background: var(--accent);
-    color: #fff;
-    padding: .55rem 1.2rem;
-    border-radius: 8px;
-    text-decoration: none;
-    transition: background .3s;
-  }
-  .back:hover { background: var(--accent-light); }
-
-  /* Masonry */
-  .masonry {
-    column-count: 2;
-    column-gap: .75rem;
-    padding: 0 1rem 2rem;
-  }
-  @media (min-width:600px){ .masonry{ column-count:3; } }
-  @media (min-width:900px){ .masonry{ column-count:4; } }
-
-  .masonry img{
-    width:100%; height:auto; margin:0 0 .75rem;
-    border-radius:8px; box-shadow:0 2px 6px var(--shadow-color);
-    cursor:pointer; transition:transform .3s; break-inside:avoid;
-  }
-  .masonry img:hover{ transform:scale(1.02); }
-
-  /* Light-box */
-  #lightbox{
-    position:fixed; inset:0; background:rgba(0,0,0,.85);
-    display:none; align-items:center; justify-content:center; z-index:1000;
-  }
-  #lightbox img{ max-width:92vw; max-height:92vh; border-radius:12px; box-shadow:0 4px 16px #000; }
-
-  /* Loading */
-  #loading{ text-align:center; margin:3rem 0; font-size:1.1rem; }
-</style>
-
-<body>
-  <header>
-    <h1>Wedding Gallery</h1>
-    <a href="index.html" class="back">⬅ Back to Upload</a>
-  </header>
-
-  <div id="loading">Loading photos…</div>
-  <div id="gallery" class="masonry" hidden></div>
-
-  <div id="lightbox" onclick="this.style.display='none'"><img src="" alt=""></div>
-
 <script>
-/* ---------- CONFIG ---------- */
-const API_KEY   = 'AIzaSyBcvZnPlBzF4G3pMG07x5wqUR0ADiXuiVQ';                         // ← paste key
-const FOLDER_ID = '10IJzLTnmtDJKFBu4SE7c0p_G476TsBt_';          // ← folder that stores uploads
+const API_KEY   = 'AIzaSyBcvZnPlBzF4G3pMG07x5wqUR0ADiXuiVQ';
+const FOLDER_ID = '10IJzLTnmtDJKFBu4SE7c0p_G476TsBt_';
 
-const DRIVE_URL =
-  `https://www.googleapis.com/drive/v3/files?` +
-  `q='${FOLDER_ID}'+in+parents` +                  // only items in that folder
-  `&fields=files(id,name,mimeType)` +              // restrict payload size
-  `&pageSize=1000` +                               // plenty for 1-day event
-  `&key=${API_KEY}`;
+/* proper URL-encoded Drive query */
+const q = encodeURIComponent(`'${FOLDER_ID}' in parents and trashed=false`);
+const DRIVE_URL = `https://www.googleapis.com/drive/v3/files` +
+                  `?q=${q}&fields=files(id,name,mimeType)` +
+                  `&pageSize=1000&key=${API_KEY}`;
 
-/* ---------- BUILD MOSAIC ---------- */
-async function loadGallery(){
-  try{
-    const res  = await fetch(DRIVE_URL);
-    if(!res.ok) throw new Error(res.statusText);
-    const { files } = await res.json();
+async function loadGallery() {
+  const res = await fetch(DRIVE_URL);
+  const { files = [] } = await res.json();
 
-    const images = files.filter(f => f.mimeType.startsWith('image/'));
-    if(!images.length){
-      document.getElementById('loading').textContent = 'No photos yet — check back later!';
-      return;
-    }
+  const gal   = document.getElementById('gallery');
+  const light = document.querySelector('#lightbox img');
 
-    const gal   = document.getElementById('gallery');
-    const light = document.querySelector('#lightbox img');
+  files.filter(f => f.mimeType.startsWith('image/')).forEach(f => {
+    const src = `https://drive.google.com/uc?export=view&id=${f.id}`;
+    const img = document.createElement('img');
+    img.src = src; img.alt = f.name; img.loading = 'lazy';
+    img.onclick = () => { light.src = src; document.getElementById('lightbox').style.display = 'flex'; };
+    gal.appendChild(img);
+  });
 
-    images.forEach(f=>{
-      const src = `https://drive.google.com/uc?export=view&id=${f.id}`;
-      const img = document.createElement('img');
-      img.src   = src;
-      img.alt   = f.name;
-      img.loading = 'lazy';
-      img.onclick = ()=>{
-        light.src = src;
-        document.getElementById('lightbox').style.display='flex';
-      };
-      gal.appendChild(img);
-    });
-
-    document.getElementById('loading').remove();
-    gal.hidden = false;
-  }catch(err){
-    console.error(err);
-    document.getElementById('loading').textContent =
-      'Sorry – couldn’t load the gallery right now.';
-  }
+  document.getElementById('loading').remove();
+  gal.hidden = false;
 }
-
 loadGallery();
 </script>
-</body>
-</html>
