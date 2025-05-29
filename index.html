@@ -76,6 +76,7 @@
     #msg {
       margin-top: 1rem;
       font-size: 0.95rem;
+      min-height: 1.2em; /* keep space reserved */
     }
 
     /* ---- spinner ---- */
@@ -88,16 +89,14 @@
       animation: spin 1s linear infinite;
       margin: 1rem auto 0;
     }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+    @keyframes spin { to { transform: rotate(360deg); } }
     .hidden { display: none; }
   </style>
 </head>
 <body>
   <div class="card">
     <h2>Share your photos and videos with us!</h2>
-    <p>Choose as many files as you like – they’ll upload in full quality.</p>
+    <p>Choose as many files as you like – they’ll upload in full quality (we resize large images client‑side to speed things up).</p>
 
     <input type="file" id="file" accept="image/*,video/*" multiple />
     <button id="send">Upload</button>
@@ -109,11 +108,26 @@
   // Paste your Apps Script endpoint here if it changes
   const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwqtZqANbZ5thblNKsQdNwAdH1z5bqBKM3uMClYBeLSoxYd6CY-HuxfpYpHODHxuxur/exec';
 
+  // ---- UI helpers ----
   document.getElementById('send').onclick = () => uploadFiles();
 
+  function toggleUI(isUploading) {
+    document.getElementById('spinner').classList.toggle('hidden', !isUploading);
+    document.getElementById('send').disabled = isUploading;
+    if (isUploading) {
+      showMessage('Uploading…, sorry it\'s taking a while');
+    }
+  }
+  function showMessage(text, ok = false) {
+    const el = document.getElementById('msg');
+    el.textContent = text;
+    el.style.color = ok ? 'var(--accent)' : 'inherit';
+  }
+
+  // ---- core logic ----
   async function uploadFiles() {
     const input  = document.getElementById('file');
-    const files  = input.files;
+    const files  = Array.from(input.files);
     if (!files.length) {
       alert('Pick at least one file first!');
       return;
@@ -121,8 +135,9 @@
 
     toggleUI(true);
     try {
+      // Upload sequentially to respect Apps Script quota & avoid memory blow‑ups
       for (const file of files) {
-        await uploadSingle(file);   // sequential keeps quotas happier
+        await uploadSingle(file);
       }
       showMessage('Thank you so much for celebrating with us. Lots of love, Adiba & Zac 🥰', true);
       input.value = '';
@@ -134,38 +149,50 @@
     }
   }
 
-  function toggleUI(isUploading) {
-    document.getElementById('spinner').classList.toggle('hidden', !isUploading);
-    document.getElementById('send').disabled = isUploading;
-    if (isUploading) {
-      showMessage('Uploading…, sorry it\'s taking a while');
-    }
+  // ---- helpers ----
+  function downscaleImage(file, maxDim = 2400, quality = 0.85) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width: w, height: h } = img;
+        if (w > h && w > maxDim) { h *= maxDim / w; w = maxDim; }
+        else if (h > w && h > maxDim) { w *= maxDim / h; h = maxDim; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        canvas.toBlob(b => b ? resolve(b) : reject('Canvas toBlob failed'), 'image/jpeg', quality);
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
   }
 
-  function showMessage(text, ok = false) {
-    const el = document.getElementById('msg');
-    el.textContent = text;
-    el.style.color = ok ? 'var(--accent)' : 'inherit';
-  }
-
-  function fileToBase64(file) {
+  function blobToBase64(blob) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = () => {
-        const b64 = reader.result.split(',')[1]; // strip the data: prefix
-        resolve(b64);
-      };
+      reader.onload = () => resolve(reader.result.split(',')[1]);
       reader.onerror = reject;
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(blob);
     });
   }
 
   async function uploadSingle(file) {
-    const b64  = await fileToBase64(file);
+    let blob = file;
+    let filename = file.name;
+    let mimetype = file.type || 'application/octet-stream';
+
+    // Compress images client‑side to speed up transfer; skip videos
+    if (file.type.startsWith('image/')) {
+      blob = await downscaleImage(file);
+      filename = filename.replace(/\.[^/.]+$/, '') + '_web.jpg';
+      mimetype = 'image/jpeg';
+    }
+
+    const b64 = await blobToBase64(blob);
     const body = new URLSearchParams({
-      data:     b64,
-      filename: file.name,
-      mimetype: file.type || 'application/octet-stream'
+      data: b64,
+      filename,
+      mimetype
     });
     const res = await fetch(ENDPOINT, { method: 'POST', body });
     if (!res.ok) throw new Error(res.statusText);
