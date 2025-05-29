@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Share your photos 📸</title>
+<style>
+  body{font-family:sans-serif;display:grid;place-items:center;height:100vh;margin:0}
+  .card{padding:2rem 3rem;border-radius:12px;box-shadow:0 4px 16px #0002;text-align:center}
+  input,button{font:inherit;padding:.7rem 1rem;border:1px solid #ccc;border-radius:8px;width:100%}
+  button{cursor:pointer;background:#0073ff;color:#fff;border:none;margin-top:1rem}
+  #msg{margin-top:1rem;font-size:.9rem}
+</style>
+<div class="card">
+  <h2>Drop your wedding pics!</h2>
+  <p>Choose a photo or video – full quality.</p>
+
+  <input type="file" id="file" accept="image/*,video/*" />
+  <button id="send">Upload</button>
+  <div id="msg"></div>
+</div>
+
+<script>
+const ENDPOINT = 'PASTE_YOUR_WEBAPP_URL_HERE';
+
+document.getElementById('send').onclick = async () => {
+  const f = document.getElementById('file').files[0];
+  if (!f) return alert('Pick a file first!');
+  document.getElementById('msg').textContent = 'Uploading…';
+
+  // Convert to base64 (Apps Script can’t handle raw multipart without a helper lib)
+  const b64 = await new Promise(r => {
+    const fr = new FileReader();
+    fr.onload = () => r(fr.result.split(',')[1]); // strip "data:…;base64,"
+    fr.readAsDataURL(f);
+  });
+
+  const form = new URLSearchParams({
+    data:      b64,
+    filename:  f.name,
+    mimetype:  f.type || 'application/octet-stream'
+  });
+
+  try {
+    const res = await fetch(ENDPOINT, {method:'POST', body:form});
+    if (!res.ok) throw new Error(res.statusText);
+    document.getElementById('msg').innerHTML = '✅ Thanks!';
+    document.getElementById('file').value = '';
+  } catch (err) {
+    document.getElementById('msg').textContent = '❌ Upload failed – please try again.';
+    console.error(err);
+  }
+};
+</script>
+</html>
