@@ -1,210 +1,148 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Share your photos and videos with us!</title>
-  <!-- Google font to match your palette -->
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --page-bg: #fafafa;
-      --text-primary: #333333;
-      --accent: #5C1D13;
-      --accent-light: #d6a96e;
-      --card-bg: #ffffff;
-      --shadow-color: rgba(0,0,0,0.1);
-    }
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Our Wedding Gallery</title>
 
-    /* ---- layout ---- */
-    body {
-      margin: 0;
-      padding: 0 1rem;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-      background: var(--page-bg);
-      color: var(--text-primary);
-      line-height: 1.6;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+<!-- Font + palette identical to upload page -->
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&display=swap" rel="stylesheet">
 
-    h1, h2, h3 {
-      margin: 0;
-      font-family: 'Cormorant Garamond', serif;
-      color: var(--accent);
-    }
+<style>
+  :root {
+    --page-bg: #fafafa;
+    --text-primary: #333333;
+    --accent: #5C1D13;
+    --accent-light: #d6a96e;
+    --card-bg: #ffffff;
+    --shadow-color: rgba(0,0,0,0.1);
+  }
 
-    .card {
-      background: var(--card-bg);
-      border-radius: 16px;
-      box-shadow: 0 4px 12px var(--shadow-color);
-      padding: 2rem 2.5rem;
-      max-width: 460px;
-      width: 100%;
-      text-align: center;
-    }
+  /* overall layout */
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    background: var(--page-bg);
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
 
-    /* ---- form elements ---- */
-    input[type=file],
-    button {
-      font: inherit;
-      padding: 0.75rem 1rem;
-      border: 1px solid #dddddd;
-      border-radius: 8px;
-      width: 100%;
-      box-sizing: border-box;
-    }
+  header {
+    text-align: center;
+    padding: 2rem 1rem 1rem;
+  }
+  h1 { margin: 0; font-family: 'Cormorant Garamond', serif; color: var(--accent); }
 
-    button {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      margin-top: 1rem;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    button.secondary {
-      background: var(--accent-light);
-      margin-top: 0.5rem;
-    }
-    button:hover:not(:disabled) { opacity: 0.9; }
-    button:disabled { background: #cccccc; cursor: not-allowed; }
+  /* back-button */
+  .back {
+    display: inline-block;
+    margin-top: 0.5rem;
+    background: var(--accent);
+    color: #fff;
+    padding: 0.55rem 1.2rem;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background 0.3s;
+  }
+  .back:hover { background: var(--accent-light); }
 
-    #msg {
-      margin-top: 1rem;
-      font-size: 0.95rem;
-      min-height: 1.2em; /* keep space reserved */
-    }
+  /* Masonry layout with CSS columns */
+  .masonry {
+    column-count: 2;
+    column-gap: 0.75rem;
+    padding: 0 1rem 2rem;
+  }
+  @media (min-width: 600px) { .masonry { column-count: 3; } }
+  @media (min-width: 900px) { .masonry { column-count: 4; } }
 
-    /* ---- progress bar ---- */
-    .progress {
-      width: 100%;
-      background: #e6e6e6;
-      border-radius: 8px;
-      margin-top: 0.5rem;
-      height: 8px;
-      overflow: hidden;
-      display: none; /* revealed during upload */
-    }
-    #progressBar {
-      width: 0%;
-      height: 100%;
-      background: var(--accent);
-      transition: width 0.3s ease;
-    }
-  </style>
-</head>
+  .masonry img {
+    width: 100%;
+    height: auto;
+    margin: 0 0 0.75rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px var(--shadow-color);
+    cursor: pointer;
+    transition: transform 0.3s;
+    break-inside: avoid;
+  }
+  .masonry img:hover { transform: scale(1.02); }
+
+  /* simple light-box */
+  #lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  #lightbox img {
+    max-width: 92vw;
+    max-height: 92vh;
+    box-shadow: 0 4px 16px #000;
+    border-radius: 12px;
+  }
+
+  /* loading indicator */
+  #loading {
+    text-align: center;
+    margin: 3rem 0;
+    font-size: 1.1rem;
+  }
+</style>
+
 <body>
-  <div class="card">
-    <h2>Share your photos and videos with us!</h2>
-    <p>Choose as many files as you like – they’ll upload in full quality (we resize large images client‑side to speed things up).</p>
+  <header>
+    <h1>Wedding Gallery</h1>
+    <a href="index.html" class="back">⬅ Back to Upload</a>
+  </header>
 
-    <input type="file" id="file" accept="image/*,video/*" multiple />
-    <button id="send">Upload</button>
-    <button id="gallery" class="secondary">Show Gallery</button>
-    <div id="msg"></div>
-    <div class="progress" id="progressWrapper"><div id="progressBar"></div></div>
+  <div id="loading">Loading photos…</div>
+  <div class="masonry" id="gallery" hidden></div>
+
+  <div id="lightbox" onclick="this.style.display='none'">
+    <img src="" alt="">
   </div>
 
-  <script>
-  const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwqtZqANbZ5thblNKsQdNwAdH1z5bqBKM3uMClYBeLSoxYd6CY-HuxfpYpHODHxuxur/exec';
+<script>
+/* ---------- CONFIG ---------- */
+const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwqtZqANbZ5thblNKsQdNwAdH1z5bqBKM3uMClYBeLSoxYd6CY-HuxfpYpHODHxuxur/exec';
 
-  // ---- UI helpers ----
-  document.getElementById('send').onclick    = () => uploadFiles();
-  document.getElementById('gallery').onclick = () => window.location.href = 'gallery.html';
-
-  const msgEl   = document.getElementById('msg');
-  const progEl  = document.getElementById('progressWrapper');
-  const barEl   = document.getElementById('progressBar');
-
-  function showMessage(text, ok = false) {
-    msgEl.textContent = text;
-    msgEl.style.color = ok ? 'var(--accent)' : 'inherit';
-  }
-
-  // ---- core logic ----
-  async function uploadFiles() {
-    const input  = document.getElementById('file');
-    const files  = Array.from(input.files);
-    if (!files.length) {
-      alert('Pick at least one file first!');
-      return;
-    }
-
-    // init UI
-    document.getElementById('send').disabled = true;
-    progEl.style.display = 'block';
-    barEl.style.width = '0%';
-
-    const total = files.length;
-
-    try {
-      for (let i = 0; i < total; i++) {
-        showMessage(`${i + 1}/${total} uploading…`);
-        await uploadSingle(files[i]);
-        barEl.style.width = `${((i + 1) / total) * 100}%`;
-      }
-      showMessage('Thank you so much for celebrating with us. Lots of love, Adiba & Zac 🥰', true);
-      input.value = '';
-    } catch (err) {
-      console.error(err);
-      showMessage('❌ Something went wrong – please try again.');
-    } finally {
-      document.getElementById('send').disabled = false;
-      setTimeout(() => { progEl.style.display = 'none'; barEl.style.width = '0%'; }, 1500);
-    }
-  }
-
-  // ---- helpers ----
-  function downscaleImage(file, maxDim = 2400, quality = 0.85) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        let { width: w, height: h } = img;
-        if (w > h && w > maxDim) { h *= maxDim / w; w = maxDim; }
-        else if (h > w && h > maxDim) { w *= maxDim / h; h = maxDim; }
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        canvas.toBlob(b => b ? resolve(b) : reject('Canvas toBlob failed'), 'image/jpeg', quality);
-      };
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
-    });
-  }
-
-  function blobToBase64(blob) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result.split(',')[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  }
-
-  async function uploadSingle(file) {
-    let blob = file;
-    let filename = file.name;
-    let mimetype = file.type || 'application/octet-stream';
-
-    // Compress images client‑side to speed up transfer; skip videos
-    if (file.type.startsWith('image/')) {
-      blob = await downscaleImage(file);
-      filename = filename.replace(/\.[^/.]+$/, '') + '_web.jpg';
-      mimetype = 'image/jpeg';
-    }
-
-    const b64 = await blobToBase64(blob);
-    const body = new URLSearchParams({
-      data: b64,
-      filename,
-      mimetype
-    });
-    const res = await fetch(ENDPOINT, { method: 'POST', body });
+/* ---------- BUILD GALLERY ---------- */
+async function loadGallery() {
+  try {
+    const res = await fetch(ENDPOINT);                 // doGet()
     if (!res.ok) throw new Error(res.statusText);
+    const files = await res.json();
+
+    const gal = document.getElementById('gallery');
+    const light = document.getElementById('lightbox').querySelector('img');
+
+    files.forEach(f => {
+      const src = `https://drive.google.com/uc?export=view&id=${f.id}`;
+      const img = document.createElement('img');
+      img.src = src;
+      img.alt = f.name;
+      img.loading = 'lazy';
+      img.onclick = () => {
+        light.src = src;
+        document.getElementById('lightbox').style.display = 'flex';
+      };
+      gal.appendChild(img);
+    });
+
+    document.getElementById('loading').remove();
+    gal.hidden = false;
+  } catch (err) {
+    console.error(err);
+    document.getElementById('loading').textContent =
+      'Sorry – couldn’t load the gallery right now.';
   }
-  </script>
+}
+
+loadGallery();
+</script>
 </body>
 </html>
