@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Wedding Gallery</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --page-bg: #fafafa;
+      --text-primary: #333333;
+      --accent: #5C1D13;
+      --accent-light: #d6a96e;
+      --card-bg: #ffffff;
+      --shadow-color: rgba(0,0,0,0.1);
+    }
+
+    body {
+      margin: 0;
+      background: var(--page-bg);
+      color: var(--text-primary);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    }
+
+    header {
+      padding: 1rem;
+      text-align: center;
+    }
+    h1 {
+      margin: 0;
+      font-family: 'Cormorant Garamond', serif;
+      color: var(--accent);
+      font-size: 2.2rem;
+    }
+    a.btn {
+      display: inline-block;
+      margin-top: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 0.95rem;
+    }
+
+    #status {
+      text-align: center;
+      margin: 2rem 0;
+      font-size: 1rem;
+    }
+
+    /* ---- mosaic gallery ---- */
+    #gallery {
+      column-count: 3;
+      column-gap: 0;
+    }
+    #gallery img {
+      width: 100%;
+      height: auto;
+      break-inside: avoid;
+      margin-bottom: 0;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    #gallery img:hover { opacity: 0.9; }
+
+    @media(max-width:900px){ #gallery{column-count:2;} }
+    @media(max-width:600px){ #gallery{column-count:1;} }
+
+    /* lightbox */
+    #lightbox {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      box-sizing: border-box;
+      z-index: 1000;
+      visibility: hidden;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    #lightbox img {
+      max-width: 100%;
+      max-height: 100%;
+    }
+    #lightbox.show { visibility: visible; opacity: 1; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Our Wedding Gallery</h1>
+    <a href="index.html" class="btn">← Back to Uploads</a>
+  </header>
+
+  <p id="status">Loading gallery…</p>
+  <div id="gallery"></div>
+
+  <div id="lightbox" onclick="this.classList.remove('show')"><img src="" alt="preview"></div>
+
+  <script>
+  const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwqtZqANbZ5thblNKsQdNwAdH1z5bqBKM3uMClYBeLSoxYd6CY-HuxfpYpHODHxuxur/exec';
+
+  async function loadGallery(){
+    try {
+      const res = await fetch(ENDPOINT);
+      const files = await res.json();
+      if(!Array.isArray(files) || !files.length){
+        document.getElementById('status').textContent = 'No photos yet – be the first!';
+        return;
+      }
+      document.getElementById('status').remove();
+      const gal = document.getElementById('gallery');
+      files.forEach(f=>{
+        // we expect the Apps Script to return either {id:"..."} or {url:"..."}
+        const img = document.createElement('img');
+        img.loading = 'lazy';
+        img.src = f.url ? f.url : `https://drive.google.com/uc?export=view&id=${f.id}`;
+        img.alt = f.name || 'wedding photo';
+        img.onclick = ()=>{
+          const lb = document.getElementById('lightbox');
+          lb.querySelector('img').src = img.src;
+          lb.classList.add('show');
+        };
+        gal.appendChild(img);
+      });
+    } catch(err){
+      console.error(err);
+      document.getElementById('status').textContent = 'Failed to load gallery.';
+    }
+  }
+  window.addEventListener('DOMContentLoaded', loadGallery);
+  </script>
+</body>
+</html>
