@@ -65,8 +65,12 @@
       cursor: pointer;
       transition: background 0.3s;
     }
-    button:hover:not(:disabled) {
+    button.secondary {
       background: var(--accent-light);
+      margin-top: 0.5rem;
+    }
+    button:hover:not(:disabled) {
+      opacity: 0.9;
     }
     button:disabled {
       background: #cccccc;
@@ -100,6 +104,7 @@
 
     <input type="file" id="file" accept="image/*,video/*" multiple />
     <button id="send">Upload</button>
+    <button id="gallery" class="secondary">Show Gallery</button>
     <div id="msg"></div>
     <div id="spinner" class="spinner hidden"></div>
   </div>
@@ -109,7 +114,8 @@
   const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwqtZqANbZ5thblNKsQdNwAdH1z5bqBKM3uMClYBeLSoxYd6CY-HuxfpYpHODHxuxur/exec';
 
   // ---- UI helpers ----
-  document.getElementById('send').onclick = () => uploadFiles();
+  document.getElementById('send').onclick   = () => uploadFiles();
+  document.getElementById('gallery').onclick = () => window.location.href = 'gallery.html';
 
   function toggleUI(isUploading) {
     document.getElementById('spinner').classList.toggle('hidden', !isUploading);
