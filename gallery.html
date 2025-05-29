@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Wedding Gallery</title>
+  <title>Share your photos with us!</title>
+  <!-- Google font to match your palette -->
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -15,124 +16,195 @@
       --shadow-color: rgba(0,0,0,0.1);
     }
 
+    /* ---- layout ---- */
     body {
       margin: 0;
+      padding: 0 1rem;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
       background: var(--page-bg);
       color: var(--text-primary);
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-    }
-
-    header {
-      padding: 1rem;
-      text-align: center;
-    }
-    h1 {
-      margin: 0;
-      font-family: 'Cormorant Garamond', serif;
-      color: var(--accent);
-      font-size: 2.2rem;
-    }
-    a.btn {
-      display: inline-block;
-      margin-top: 0.5rem;
-      padding: 0.5rem 1rem;
-      background: var(--accent);
-      color: #fff;
-      border-radius: 8px;
-      text-decoration: none;
-      font-size: 0.95rem;
-    }
-
-    #status {
-      text-align: center;
-      margin: 2rem 0;
-      font-size: 1rem;
-    }
-
-    /* ---- mosaic gallery ---- */
-    #gallery {
-      column-count: 3;
-      column-gap: 0;
-    }
-    #gallery img {
-      width: 100%;
-      height: auto;
-      break-inside: avoid;
-      margin-bottom: 0;
-      cursor: pointer;
-      transition: opacity 0.2s;
-    }
-    #gallery img:hover { opacity: 0.9; }
-
-    @media(max-width:900px){ #gallery{column-count:2;} }
-    @media(max-width:600px){ #gallery{column-count:1;} }
-
-    /* lightbox */
-    #lightbox {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8);
+      line-height: 1.6;
+      min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 1rem;
+    }
+
+    h1, h2, h3 {
+      margin: 0;
+      font-family: 'Cormorant Garamond', serif;
+      color: var(--accent);
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      box-shadow: 0 4px 12px var(--shadow-color);
+      padding: 2rem 2.5rem;
+      max-width: 460px;
+      width: 100%;
+      text-align: center;
+    }
+
+    /* ---- form elements ---- */
+    input[type=file],
+    button {
+      font: inherit;
+      padding: 0.75rem 1rem;
+      border: 1px solid #dddddd;
+      border-radius: 8px;
+      width: 100%;
       box-sizing: border-box;
-      z-index: 1000;
-      visibility: hidden;
-      opacity: 0;
-      transition: opacity 0.3s;
     }
-    #lightbox img {
-      max-width: 100%;
-      max-height: 100%;
+
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      margin-top: 1rem;
+      cursor: pointer;
+      transition: background 0.3s;
     }
-    #lightbox.show { visibility: visible; opacity: 1; }
+    button.secondary {
+      background: var(--accent-light);
+      margin-top: 0.5rem;
+    }
+    button:hover:not(:disabled) { opacity: 0.9; }
+    button:disabled { background: #cccccc; cursor: not-allowed; }
+
+    #msg {
+      margin-top: 1rem;
+      font-size: 0.95rem;
+      min-height: 1.2em; /* keep space reserved */
+    }
+
+    /* ---- progress bar ---- */
+    .progress {
+      width: 100%;
+      background: #e6e6e6;
+      border-radius: 8px;
+      margin-top: 0.5rem;
+      height: 8px;
+      overflow: hidden;
+      display: none; /* revealed during upload */
+    }
+    #progressBar {
+      width: 0%;
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.3s ease;
+    }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Our Wedding Gallery</h1>
-    <a href="index.html" class="btn">← Back to Uploads</a>
-  </header>
+  <div class="card">
+    <h2>Share your photos and videos with us!</h2>
+    <p>Choose as many files as you like – they’ll upload in full quality (we resize large images client‑side to speed things up).</p>
 
-  <p id="status">Loading gallery…</p>
-  <div id="gallery"></div>
-
-  <div id="lightbox" onclick="this.classList.remove('show')"><img src="" alt="preview"></div>
+    <input type="file" id="file" accept="image/*,video/*" multiple />
+    <button id="send">Upload</button>
+    <button id="gallery" class="secondary">Show Gallery</button>
+    <div id="msg"></div>
+    <div class="progress" id="progressWrapper"><div id="progressBar"></div></div>
+  </div>
 
   <script>
   const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwqtZqANbZ5thblNKsQdNwAdH1z5bqBKM3uMClYBeLSoxYd6CY-HuxfpYpHODHxuxur/exec';
 
-  async function loadGallery(){
+  // ---- UI helpers ----
+  document.getElementById('send').onclick    = () => uploadFiles();
+  document.getElementById('gallery').onclick = () => window.location.href = 'gallery.html';
+
+  const msgEl   = document.getElementById('msg');
+  const progEl  = document.getElementById('progressWrapper');
+  const barEl   = document.getElementById('progressBar');
+
+  function showMessage(text, ok = false) {
+    msgEl.textContent = text;
+    msgEl.style.color = ok ? 'var(--accent)' : 'inherit';
+  }
+
+  // ---- core logic ----
+  async function uploadFiles() {
+    const input  = document.getElementById('file');
+    const files  = Array.from(input.files);
+    if (!files.length) {
+      alert('Pick at least one file first!');
+      return;
+    }
+
+    // init UI
+    document.getElementById('send').disabled = true;
+    progEl.style.display = 'block';
+    barEl.style.width = '0%';
+
+    const total = files.length;
+
     try {
-      const res = await fetch(ENDPOINT);
-      const files = await res.json();
-      if(!Array.isArray(files) || !files.length){
-        document.getElementById('status').textContent = 'No photos yet – be the first!';
-        return;
+      for (let i = 0; i < total; i++) {
+        showMessage(`${i + 1}/${total} uploading…`);
+        await uploadSingle(files[i]);
+        barEl.style.width = `${((i + 1) / total) * 100}%`;
       }
-      document.getElementById('status').remove();
-      const gal = document.getElementById('gallery');
-      files.forEach(f=>{
-        // we expect the Apps Script to return either {id:"..."} or {url:"..."}
-        const img = document.createElement('img');
-        img.loading = 'lazy';
-        img.src = f.url ? f.url : `https://drive.google.com/uc?export=view&id=${f.id}`;
-        img.alt = f.name || 'wedding photo';
-        img.onclick = ()=>{
-          const lb = document.getElementById('lightbox');
-          lb.querySelector('img').src = img.src;
-          lb.classList.add('show');
-        };
-        gal.appendChild(img);
-      });
-    } catch(err){
+      showMessage('Thank you so much for celebrating with us. Lots of love, Adiba & Zac 🥰', true);
+      input.value = '';
+    } catch (err) {
       console.error(err);
-      document.getElementById('status').textContent = 'Failed to load gallery.';
+      showMessage('❌ Something went wrong – please try again.');
+    } finally {
+      document.getElementById('send').disabled = false;
+      setTimeout(() => { progEl.style.display = 'none'; barEl.style.width = '0%'; }, 1500);
     }
   }
-  window.addEventListener('DOMContentLoaded', loadGallery);
+
+  // ---- helpers ----
+  function downscaleImage(file, maxDim = 2400, quality = 0.85) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width: w, height: h } = img;
+        if (w > h && w > maxDim) { h *= maxDim / w; w = maxDim; }
+        else if (h > w && h > maxDim) { w *= maxDim / h; h = maxDim; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        canvas.toBlob(b => b ? resolve(b) : reject('Canvas toBlob failed'), 'image/jpeg', quality);
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function uploadSingle(file) {
+    let blob = file;
+    let filename = file.name;
+    let mimetype = file.type || 'application/octet-stream';
+
+    // Compress images client‑side to speed up transfer; skip videos
+    if (file.type.startsWith('image/')) {
+      blob = await downscaleImage(file);
+      filename = filename.replace(/\.[^/.]+$/, '') + '_web.jpg';
+      mimetype = 'image/jpeg';
+    }
+
+    const b64 = await blobToBase64(blob);
+    const body = new URLSearchParams({
+      data: b64,
+      filename,
+      mimetype
+    });
+    const res = await fetch(ENDPOINT, { method: 'POST', body });
+    if (!res.ok) throw new Error(res.statusText);
+  }
   </script>
 </body>
 </html>
