@@ -8,56 +8,30 @@
 <style>
   :root{--bg:#fafafa;--text:#333;--accent:#5C1D13;--accentLight:#d6a96e;--shadow:rgba(0,0,0,.08)}
   *{box-sizing:border-box}
-  body{
-    margin:0;padding:0 1rem;
-    font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;
-    background:var(--bg);color:var(--text);
-    min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center
-  }
-  h2{
-    margin:0 0 .75rem;
-    font-family:'Cormorant Garamond',serif;font-weight:700;color:var(--accent)
-  }
-  p{margin:0 0 1.25rem;font-size:1rem;line-height:1.45}
-  .card{
-    background:#fff;border-radius:20px;box-shadow:0 8px 24px var(--shadow);
-    width:100%;max-width:420px;padding:2rem;text-align:center
-  }
-  .btn{
-    display:block;width:100%;
-    padding:.9rem 1rem;border-radius:12px;
-    font:600 1.15rem/1.2 inherit;
-    cursor:pointer;border:none;
-    transition:opacity .25s
-  }
+  body{margin:0;padding:0 1rem;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  h2{margin:0 0 .75rem;font-family:'Cormorant Garamond',serif;color:var(--accent);font-weight:700}
+  p{margin:0 0 1.3rem;font-size:1rem;line-height:1.45}
+  .card{background:#fff;border-radius:20px;box-shadow:0 8px 24px var(--shadow);width:100%;max-width:420px;padding:2rem;text-align:center}
+  .btn{display:block;width:100%;padding:1rem 1.1rem;border-radius:12px;font:600 1.25rem/1.2 inherit;cursor:pointer;border:none;transition:opacity .25s}
   .btn:hover:not(:disabled){opacity:.9}
   .btn:disabled{background:#ccc;cursor:not-allowed}
-  #choose{background:var(--accentLight);color:#fff;margin-bottom:.5rem}
+  #choose{background:var(--accentLight);color:#fff;margin-bottom:.8rem}
   #upload{background:var(--accent);color:#fff;margin-top:1rem;display:none}
 
   /* live preview */
-  #preview{
-    display:grid;grid-template-columns:repeat(4,1fr);gap:.35rem;
-    margin:1.25rem 0 .85rem   /* extra bottom space */
-  }
-  #preview img,.tile{
-    width:100%;aspect-ratio:1;border-radius:8px;object-fit:cover;
-    box-shadow:0 2px 4px var(--shadow)
-  }
-  .tile{
-    display:flex;align-items:center;justify-content:center;
-    background:#e0e0e0;color:#555;font-weight:600;font-size:1rem
-  }
+  #preview{display:grid;grid-template-columns:repeat(4,1fr);gap:.35rem;margin:.4rem 0 .6rem}
+  #preview img,.tile{width:100%;aspect-ratio:1;border-radius:8px;object-fit:cover;box-shadow:0 2px 4px var(--shadow)}
+  .tile{display:flex;align-items:center;justify-content:center;background:#e0e0e0;color:#555;font-weight:600;font-size:1rem}
 
-  /* small status line */
-  #msg{font-size:.95rem;min-height:1.3em;margin-bottom:.25rem}
-
-  /* progress bar */
+  /* status + bar */
+  #msg{font-size:.95rem;min-height:1.2em;margin-top:.3rem}
   #progressWrap{margin-top:.6rem;height:8px;width:100%;background:#ddd;border-radius:4px;overflow:hidden;display:none}
   #progressBar{height:100%;width:0;background:var(--accent);transition:width .35s ease}
 
   /* gallery link */
   #galleryLink{margin-top:2.4rem;color:var(--accent);font-size:1.05rem;text-decoration:none;font-weight:600}
+
+  #file{display:none}
 </style>
 
 <body>
@@ -66,16 +40,15 @@
     <h2>Share your photos with us!</h2>
     <p>Upload as many pictures as you like.<br>No videos please 🙂</p>
 
-    <div id="preview"></div>
-
-    <input type="file" id="file" accept="image/*" multiple>
     <button id="choose" class="btn">Choose photos</button>
-
-    <div id="msg"></div>
+    <div id="preview"></div>
 
     <button id="upload" class="btn">Upload</button>
 
+    <div id="msg"></div>
     <div id="progressWrap"><div id="progressBar"></div></div>
+
+    <input type="file" id="file" accept="image/*" multiple>
   </div>
 
   <a id="galleryLink" href="gallery.html">→ View shared gallery</a>
@@ -86,29 +59,35 @@ const ENDPOINT='https://script.google.com/macros/s/AKfycbyqi94k9S_FdEm441PZL0Mbj
 
 /* ---------- helpers ---------- */
 const $=s=>document.querySelector(s);
-const show=(t,ok=false)=>{ $('#msg').textContent=t; $('#msg').style.color=ok?'var(--accent)':'inherit'; };
-const bar=f=>$('#progressBar').style.width=(f*100)+'%';
 const toB64=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(b)});
+const show=(t,ok=false)=>{$('#msg').textContent=t;$('#msg').style.color=ok?'var(--accent)':'inherit';};
+const bar=f=>$('#progressBar').style.width=(f*100)+'%';
 
 /* ---------- choose & preview ---------- */
 $('#choose').onclick = ()=>$('#file').click();
-$('#file').onchange  = ()=>{ renderPreview([...$('#file').files]); };
+$('#file').onchange  = ()=>renderPreview([...$('#file').files]);
 
 function renderPreview(list){
   const pv=$('#preview'); pv.innerHTML='';
-  $('#upload').style.display=list.length?'block':'none';
+  if(list.length){
+    $('#upload').style.display='block';
+    $('#choose').textContent='Choose more photos';
+  }else{
+    $('#upload').style.display='none';
+    $('#choose').textContent='Choose photos';
+  }
 
   list.slice(0,3).forEach(f=>{
     const img=document.createElement('img');
-    img.src=URL.createObjectURL(f); img.onload=()=>URL.revokeObjectURL(img.src);
+    img.src=URL.createObjectURL(f);
+    img.onload=()=>URL.revokeObjectURL(img.src);
     pv.appendChild(img);
   });
   if(list.length>3){
-    const tile=document.createElement('div');
-    tile.className='tile'; tile.textContent='+'+(list.length-3);
-    pv.appendChild(tile);
+    const tile=document.createElement('div');tile.className='tile';
+    tile.textContent='+'+(list.length-3);pv.appendChild(tile);
   }
-  show(list.length?`${list.length} selected`:'',true);
+  show(''); // clear any old message
 }
 
 /* ---------- upload flow ---------- */
@@ -116,7 +95,7 @@ $('#upload').onclick = ()=>uploadAll();
 
 async function uploadAll(){
   const files=[...$('#file').files]; if(!files.length)return;
-  $('#progressWrap').style.display='block'; bar(0); $('#upload').disabled=true;
+  $('#progressWrap').style.display='block';bar(0);$('#upload').disabled=true;
 
   try{
     for(let i=0;i<files.length;i++){
@@ -128,7 +107,7 @@ async function uploadAll(){
 }
 
 async function send(file){
-  const blob=await downscale(file);
+  const blob=await resize(file);
   const body=new URLSearchParams({
     data:await toB64(blob),
     filename:file.name.replace(/\.[^/.]+$/,'')+'_web.jpg',
@@ -141,11 +120,11 @@ function complete(){
   show('Thanks for sharing! 🎉',true);
   $('#file').value=''; $('#upload').style.display='none';
   $('#progressWrap').style.display='none'; bar(0);
-  $('#preview').innerHTML='';
+  $('#preview').innerHTML=''; $('#choose').textContent='Choose photos';
 }
 
 /* ---------- client resize ---------- */
-function downscale(f,max=2400,q=.85){
+function resize(f,max=2400,q=.85){
   return new Promise((res,rej)=>{
     const img=new Image();
     img.onload=()=>{
