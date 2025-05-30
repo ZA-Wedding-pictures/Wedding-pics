@@ -4,92 +4,110 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Share your photos</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@700&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#fafafa;--text:#333;--accent:#5C1D13;--accentLight:#d6a96e;--shadow:rgba(0,0,0,.1)}
-  body{margin:0;padding:0 1rem;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center}
-  h2{margin:0 0 1rem;font-family:'Cormorant Garamond',serif;color:var(--accent)}
-  .card{background:#fff;border-radius:16px;box-shadow:0 4px 12px var(--shadow);padding:2rem 2.5rem;max-width:460px;width:100%;text-align:center}
-  button{font:inherit;padding:.75rem 1rem;border-radius:8px;width:100%;cursor:pointer;border:none;transition:opacity .3s}
-  #choose{background:var(--accentLight);color:#000;margin-top:.5rem}
+  :root{
+    --bg:#fafafa;
+    --text:#333;
+    --accent:#5C1D13;
+    --accent-light:#d6a96e;
+    --shadow:rgba(0,0,0,.08);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;padding:0 1rem;
+    font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;
+    background:var(--bg);color:var(--text);
+    display:flex;flex-direction:column;min-height:100vh;align-items:center;justify-content:center
+  }
+  h2{
+    font-family:'Cormorant Garamond',serif;
+    color:var(--accent);
+    margin:0 0 .75rem;
+    font-weight:700;
+  }
+  p{margin:0 0 1.25rem;font-size:1rem;line-height:1.45}
+  .card{
+    background:#fff;border-radius:20px;box-shadow:0 8px 24px var(--shadow);
+    width:100%;max-width:420px;padding:2rem;text-align:center
+  }
+  .btn{display:block;width:100%;padding:.8rem 1rem;border-radius:12px;font:600 1rem/1.2 inherit;cursor:pointer;border:none;transition:opacity .25s}
+  .btn:hover:not(:disabled){opacity:.9}
+  .btn:disabled{background:#ccc;cursor:not-allowed}
+  #choose{background:var(--accent-light);color:#fff;margin-bottom:.5rem}
   #upload{background:var(--accent);color:#fff;margin-top:1rem}
-  #gallery{background:var(--accentLight);color:#fff;margin-top:.5rem}
-  button:disabled{background:#ccc;cursor:not-allowed}
-  button:hover:not(:disabled){opacity:.9}
-  #msg{margin-top:1rem;font-size:.95rem;min-height:1.2em}
-  #progressWrap{margin-top:1rem;width:100%;height:10px;background:#ddd;border-radius:6px;overflow:hidden;display:none}
+  #msg{font-size:.95rem;margin-top:.4rem;min-height:1.3em}
+  #progressWrap{margin-top:1rem;height:8px;width:100%;background:#ddd;border-radius:4px;overflow:hidden;display:none}
   #progressBar{height:100%;width:0;background:var(--accent);transition:width .35s ease}
   #file{display:none}
+  /* gallery link below the card */
+  #galleryLink{margin-top:1.25rem;color:var(--accent);font-size:.95rem;text-decoration:none;font-weight:600}
 </style>
 
 <body>
+
   <div class="card">
     <h2>Share your photos with us!</h2>
-    <p>Upload as many pictures as you like. No video's please 🙂</p>
+    <p>Upload as many pictures as you like.<br>No videos please 🙂</p>
 
     <input type="file" id="file" accept="image/*" multiple>
-    <button id="choose">Choose photos</button>
-    <button id="upload" disabled>Upload</button>
-    <button id="gallery">Show Gallery</button>
-
+    <button id="choose" class="btn">Choose photos</button>
     <div id="msg"></div>
+
+    <button id="upload" class="btn" disabled>Upload</button>
+
     <div id="progressWrap"><div id="progressBar"></div></div>
   </div>
 
+  <a id="galleryLink" href="gallery.html">→ View shared gallery</a>
+
 <script>
-/* ---------- CONFIG ---------- */
-const ENDPOINT = 'https://script.google.com/macros/s/AKfycbyqi94k9S_FdEm441PZL0MbjyzFuGqCWo7ejtKkTi-W9rzfOszM1frUbS3_LV1bNDUO/exec';
+/* -------- CONFIG -------- */
+const ENDPOINT='https://script.google.com/macros/s/AKfycbyqi94k9S_FdEm441PZL0MbjyzFuGqCWo7ejtKkTi-W9rzfOszM1frUbS3_LV1bNDUO/exec';
 
-/* ---------- SHORTCUTS ---------- */
-const $ = s => document.querySelector(s);
-const toB64 = blob => new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(blob);});
-function say(t,ok=false){ $('#msg').textContent=t; $('#msg').style.color=ok?'var(--accent)':'inherit'; }
-function bar(f){ $('#progressBar').style.width = (f*100)+'%'; }
+/* -------- helpers -------- */
+const $=s=>document.querySelector(s);
+const b64=blob=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(blob)});
+const speak=(t,ok=false)=>{ $('#msg').textContent=t; $('#msg').style.color=ok?'var(--accent)':'inherit'; };
+const bar=f=>$('#progressBar').style.width=(f*100)+'%';
 
-/* ---------- EVENTS ---------- */
-$('#choose').onclick = () => $('#file').click();
-$('#file').onchange  = () => {
-  const n = $('#file').files.length;
-  $('#upload').disabled = !n;
-  say(n ? `${n} photo${n>1?'s':''} selected` : '');
+/* -------- events -------- */
+$('#choose').onclick =()=>$('#file').click();
+$('#file').onchange  =()=>{
+  const n=$('#file').files.length;
+  speak(n?`${n} photo${n>1?'s':''} selected`:'');
+  $('#upload').disabled=!n;
 };
-$('#gallery').onclick = () => location.href='gallery.html';
-$('#upload').onclick  = () => uploadAll();
+$('#upload').onclick =()=>runUpload();
 
-/* ---------- MAIN FLOW ---------- */
-async function uploadAll(){
-  const list=[...$('#file').files];
-  if(!list.length) return;
-
-  $('#progressWrap').style.display='block'; bar(0); $('#upload').disabled=true;
+/* -------- core upload -------- */
+async function runUpload(){
+  const list=[...$('#file').files]; if(!list.length)return;
+  $('#progressWrap').style.display='block';bar(0);$('#upload').disabled=true;
 
   try{
-    for(let i=0;i<list.length;i++){
-      say(`Uploading ${i+1}/${list.length}…`);
-      await send(list[i]);
-      bar((i+1)/list.length);
+    let i=0;
+    for(const f of list){
+      speak(`Uploading ${++i}/${list.length}…`);
+      await send(f); bar(i/list.length);
     }
-    say('Thanks for sharing! 🎉',true);
-    $('#file').value=''; $('#upload').disabled=true;
-  }catch(e){
-    console.error(e);
-    say('❌ Upload failed – please try again.');
-  }
+    speak('Thanks for sharing! 🎉',true);
+    $('#file').value='';$('#upload').disabled=true;
+  }catch(e){console.error(e);speak('❌ Upload failed – please try again.');}
 }
 
-/* ---------- SEND ONE FILE ---------- */
 async function send(file){
-  const blob = await downscale(file); // resize client-side
-  const body = new URLSearchParams({
-    data:      await toB64(blob),
-    filename:  file.name.replace(/\.[^/.]+$/,'')+'_web.jpg',
-    mimetype:  'image/jpeg'
+  const blob=await resize(file);
+  const body=new URLSearchParams({
+    data:await b64(blob),
+    filename:file.name.replace(/\.[^/.]+$/,'')+'_web.jpg',
+    mimetype:'image/jpeg'
   });
-  await fetch(ENDPOINT,{method:'POST',mode:'no-cors',body}); // no-CORS bypass
+  await fetch(ENDPOINT,{method:'POST',mode:'no-cors',body});
 }
 
-/* ---------- RESIZE ---------- */
-function downscale(f,max=2400,q=.85){
+/* simple client-side downscale (max dimension 2400) */
+function resize(f,max=2400,q=.85){
   return new Promise((res,rej)=>{
     const img=new Image();
     img.onload=()=>{
