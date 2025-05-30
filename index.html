@@ -8,26 +8,56 @@
 <style>
   :root{--bg:#fafafa;--text:#333;--accent:#5C1D13;--accentLight:#d6a96e;--shadow:rgba(0,0,0,.08)}
   *{box-sizing:border-box}
-  body{margin:0;padding:0 1rem;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center}
-  h2{margin:0 0 .75rem;font-family:'Cormorant Garamond',serif;color:var(--accent);font-weight:700}
+  body{
+    margin:0;padding:0 1rem;
+    font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;
+    background:var(--bg);color:var(--text);
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center
+  }
+  h2{
+    margin:0 0 .75rem;
+    font-family:'Cormorant Garamond',serif;font-weight:700;color:var(--accent)
+  }
   p{margin:0 0 1.25rem;font-size:1rem;line-height:1.45}
-  .card{background:#fff;border-radius:20px;box-shadow:0 8px 24px var(--shadow);width:100%;max-width:420px;padding:2rem;text-align:center}
-  .btn{display:block;width:100%;padding:.85rem 1rem;border-radius:12px;font:600 1.05rem/1.2 inherit;cursor:pointer;border:none;transition:opacity .25s}
+  .card{
+    background:#fff;border-radius:20px;box-shadow:0 8px 24px var(--shadow);
+    width:100%;max-width:420px;padding:2rem;text-align:center
+  }
+  .btn{
+    display:block;width:100%;
+    padding:.9rem 1rem;border-radius:12px;
+    font:600 1.15rem/1.2 inherit;
+    cursor:pointer;border:none;
+    transition:opacity .25s
+  }
   .btn:hover:not(:disabled){opacity:.9}
   .btn:disabled{background:#ccc;cursor:not-allowed}
   #choose{background:var(--accentLight);color:#fff;margin-bottom:.5rem}
   #upload{background:var(--accent);color:#fff;margin-top:1rem;display:none}
-  #progressWrap{margin-top:1rem;height:8px;width:100%;background:#ddd;border-radius:4px;overflow:hidden;display:none}
-  #progressBar{height:100%;width:0;background:var(--accent);transition:width .35s ease}
-  #file{display:none}
 
-  /* live preview grid */
-  #preview{display:grid;grid-template-columns:repeat(4,1fr);gap:.35rem;margin:1.25rem 0 0}
-  #preview img,.tile{width:100%;aspect-ratio:1;border-radius:8px;object-fit:cover;box-shadow:0 2px 4px var(--shadow)}
-  .tile{display:flex;align-items:center;justify-content:center;background:#e0e0e0;color:#555;font-weight:600;font-size:1rem}
+  /* live preview */
+  #preview{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:.35rem;
+    margin:1.25rem 0 .85rem   /* extra bottom space */
+  }
+  #preview img,.tile{
+    width:100%;aspect-ratio:1;border-radius:8px;object-fit:cover;
+    box-shadow:0 2px 4px var(--shadow)
+  }
+  .tile{
+    display:flex;align-items:center;justify-content:center;
+    background:#e0e0e0;color:#555;font-weight:600;font-size:1rem
+  }
+
+  /* small status line */
+  #msg{font-size:.95rem;min-height:1.3em;margin-bottom:.25rem}
+
+  /* progress bar */
+  #progressWrap{margin-top:.6rem;height:8px;width:100%;background:#ddd;border-radius:4px;overflow:hidden;display:none}
+  #progressBar{height:100%;width:0;background:var(--accent);transition:width .35s ease}
 
   /* gallery link */
-  #galleryLink{margin-top:2.25rem;color:var(--accent);font-size:1.05rem;text-decoration:none;font-weight:600}
+  #galleryLink{margin-top:2.4rem;color:var(--accent);font-size:1.05rem;text-decoration:none;font-weight:600}
 </style>
 
 <body>
@@ -40,6 +70,8 @@
 
     <input type="file" id="file" accept="image/*" multiple>
     <button id="choose" class="btn">Choose photos</button>
+
+    <div id="msg"></div>
 
     <button id="upload" class="btn">Upload</button>
 
@@ -54,77 +86,66 @@ const ENDPOINT='https://script.google.com/macros/s/AKfycbyqi94k9S_FdEm441PZL0Mbj
 
 /* ---------- helpers ---------- */
 const $=s=>document.querySelector(s);
-const b64=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(b)});
+const show=(t,ok=false)=>{ $('#msg').textContent=t; $('#msg').style.color=ok?'var(--accent)':'inherit'; };
 const bar=f=>$('#progressBar').style.width=(f*100)+'%';
+const toB64=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(b)});
 
 /* ---------- choose & preview ---------- */
 $('#choose').onclick = ()=>$('#file').click();
-$('#file').onchange  = ()=>{
-  const list=[...$('#file').files];
-  $('#upload').style.display=list.length?'block':'none';
-  renderPreview(list);
-};
+$('#file').onchange  = ()=>{ renderPreview([...$('#file').files]); };
 
 function renderPreview(list){
-  const wrap=$('#preview');
-  wrap.innerHTML='';                               // clear prior thumbs
-  const thumbs=list.slice(0,3);
-  thumbs.forEach(f=>{
+  const pv=$('#preview'); pv.innerHTML='';
+  $('#upload').style.display=list.length?'block':'none';
+
+  list.slice(0,3).forEach(f=>{
     const img=document.createElement('img');
-    img.src=URL.createObjectURL(f);
-    img.onload=()=>URL.revokeObjectURL(img.src);
-    wrap.appendChild(img);
+    img.src=URL.createObjectURL(f); img.onload=()=>URL.revokeObjectURL(img.src);
+    pv.appendChild(img);
   });
   if(list.length>3){
     const tile=document.createElement('div');
-    tile.className='tile';
-    tile.textContent='+'+(list.length-3);
-    wrap.appendChild(tile);
-  }else{
-    // fill up to 4 cells to keep grid even
-    for(let i=list.length;i<4;i++){
-      const ph=document.createElement('div');
-      ph.className='tile'; ph.style.background='transparent'; ph.style.boxShadow='none';
-      wrap.appendChild(ph);
-    }
+    tile.className='tile'; tile.textContent='+'+(list.length-3);
+    pv.appendChild(tile);
   }
+  show(list.length?`${list.length} selected`:'',true);
 }
 
-/* ---------- UPLOAD ---------- */
+/* ---------- upload flow ---------- */
 $('#upload').onclick = ()=>uploadAll();
 
 async function uploadAll(){
-  const list=[...$('#file').files]; if(!list.length)return;
-  $('#progressWrap').style.display='block';bar(0);$('#upload').disabled=true;
+  const files=[...$('#file').files]; if(!files.length)return;
+  $('#progressWrap').style.display='block'; bar(0); $('#upload').disabled=true;
 
   try{
-    let i=0;
-    for(const f of list){
-      await send(f); bar(++i/list.length);
+    for(let i=0;i<files.length;i++){
+      show(`Uploading ${i+1}/${files.length}… please wait`);
+      await send(files[i]); bar((i+1)/files.length);
     }
-    resetAfterSuccess();
-  }catch(e){console.error(e);alert('Upload failed – please try again.');$('#upload').disabled=false;}
+    complete();
+  }catch(e){console.error(e);show('❌ Upload failed – please try again.');$('#upload').disabled=false;}
 }
 
 async function send(file){
-  const blob=await resize(file);
+  const blob=await downscale(file);
   const body=new URLSearchParams({
-    data:await b64(blob),
+    data:await toB64(blob),
     filename:file.name.replace(/\.[^/.]+$/,'')+'_web.jpg',
     mimetype:'image/jpeg'
   });
   await fetch(ENDPOINT,{method:'POST',mode:'no-cors',body});
 }
 
-function resetAfterSuccess(){
-  alert('Thanks for sharing! 🎉');
+function complete(){
+  show('Thanks for sharing! 🎉',true);
   $('#file').value=''; $('#upload').style.display='none';
   $('#progressWrap').style.display='none'; bar(0);
   $('#preview').innerHTML='';
 }
 
-/* ---------- down-scale on device ---------- */
-function resize(f,max=2400,q=.85){
+/* ---------- client resize ---------- */
+function downscale(f,max=2400,q=.85){
   return new Promise((res,rej)=>{
     const img=new Image();
     img.onload=()=>{
