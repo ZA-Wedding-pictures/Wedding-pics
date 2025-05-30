@@ -1,138 +1,83 @@
 <!doctype html>
 <html lang="en">
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Share your photos and videos with us1!</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Share your photos</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&display=swap" rel="stylesheet">
-
 <style>
-  :root {
-    --page-bg: #fafafa;
-    --text-primary: #333;
-    --accent: #5C1D13;
-    --accent-light: #d6a96e;
-    --card-bg: #fff;
-    --shadow: rgba(0,0,0,.1);
+  :root{
+    --bg:#fafafa;--text:#333;--accent:#5C1D13;--accentLight:#d6a96e;
+    --card:#fff;--shadow:rgba(0,0,0,.1)
   }
-  body {
-    margin:0; padding:0 1rem;
-    font-family: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
-    background:var(--page-bg); color:var(--text-primary);
-    min-height:100vh; display:flex; align-items:center; justify-content:center;
-  }
-  h1,h2,h3 { margin:0; font-family:'Cormorant Garamond',serif; color:var(--accent); }
-
-  .card {
-    background:var(--card-bg); border-radius:16px;
-    box-shadow:0 4px 12px var(--shadow);
-    padding:2rem 2.5rem; max-width:460px; width:100%; text-align:center;
-  }
-  input[type=file],button {
-    font:inherit; padding:.75rem 1rem; border-radius:8px;
-    width:100%; box-sizing:border-box;
-  }
-  button {
-    background:var(--accent); color:#fff; border:none; margin-top:1rem; cursor:pointer;
-    transition:background .3s;
-  }
-  button.secondary { background:var(--accent-light); margin-top:.5rem; }
-  button:hover:not(:disabled) { opacity:.9; }
-  button:disabled { background:#ccc; cursor:not-allowed; }
-
-  #msg { margin-top:1rem; font-size:.95rem; min-height:1.2em; }
-
-  /* progress bar */
-  #progressWrap { margin-top:1rem; width:100%; height:10px; background:#ddd;
-                  border-radius:6px; overflow:hidden; display:none; }
-  #progressBar  { height:100%; width:0%; background:var(--accent);
-                  transition:width .35s ease; }
+  body{margin:0;padding:0 1rem;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center}
+  h2{margin:0 0 1rem;font-family:'Cormorant Garamond',serif;color:var(--accent)}
+  .card{background:var(--card);border-radius:16px;box-shadow:0 4px 12px var(--shadow);padding:2rem 2.5rem;max-width:460px;width:100%;text-align:center}
+  button{font:inherit;padding:.75rem 1rem;border-radius:8px;width:100%;cursor:pointer;border:none;transition:opacity .3s}
+  #chooseBtn{background:var(--accentLight);color:#000;margin-top:.5rem}
+  #uploadBtn{background:var(--accent);color:#fff;margin-top:1rem}
+  button:disabled{background:#ccc;cursor:not-allowed}
+  button:hover:not(:disabled){opacity:.9}
+  #msg{margin-top:1rem;font-size:.95rem;min-height:1.2em}
+  #progressWrap{margin-top:1rem;width:100%;height:10px;background:#ddd;border-radius:6px;overflow:hidden;display:none}
+  #progressBar{height:100%;width:0;background:var(--accent);transition:width .35s ease}
+  /* hide the actual file input */
+  #file{display:none}
 </style>
 
 <body>
   <div class="card">
-    <h2>Share your photos and videos with us!</h2>
-    <p>Choose as many files as you like – large images are resized client-side to speed things up.</p>
+    <h2>Share your photos with us!</h2>
+    <p>Upload as many pictures as you like. No video's please :)</p>
 
-    <input type="file" id="file" multiple accept="image/*,video/*" />
-    <button id="send">Upload</button>
-    <button id="gallery" class="secondary">Show Gallery</button>
+    <input type="file" id="file" accept="image/*" multiple>
+    <button id="chooseBtn">Choose photos</button>
+    <button id="uploadBtn" disabled>Upload</button>
+    <button id="galleryBtn" style="background:var(--accentLight);color:#fff;margin-top:.5rem">Show Gallery</button>
 
     <div id="msg"></div>
     <div id="progressWrap"><div id="progressBar"></div></div>
   </div>
 
 <script>
-/* ---------- CONFIG ---------- */
-const ENDPOINT = 'https://script.google.com/macros/s/AKfycbyqi94k9S_FdEm441PZL0MbjyzFuGqCWo7ejtKkTi-W9rzfOszM1frUbS3_LV1bNDUO/exec';
+const ENDPOINT='https://script.google.com/macros/s/AKfycbyqi94k9S_FdEm441PZL0MbjyzFuGqCWo7ejtKkTi-W9rzfOszM1frUbS3_LV1bNDUO/exec';
 
-/* ---------- helpers ---------- */
-const $ = sel => document.querySelector(sel);
-function showMessage(txt, ok=false){ $('#msg').textContent=txt; $('#msg').style.color=ok?'var(--accent)':'inherit'; }
-function setBar(frac){ $('#progressBar').style.width=(frac*100)+'%'; }
+const $=s=>document.querySelector(s);
+function say(t,ok=false){$('#msg').textContent=t;$('#msg').style.color=ok?'var(--accent)':'inherit';}
+function bar(f){$('#progressBar').style.width=(f*100)+'%';}
 
-/* ---------- UI events ---------- */
-$('#send').onclick    = () => uploadFiles();
-$('#gallery').onclick = () => location.href='gallery.html';
+$('#chooseBtn').onclick=()=>$('#file').click();
+$('#file').onchange=()=>{$('#uploadBtn').disabled=!$('#file').files.length;if($('#file').files.length){say(`${$('#file').files.length} photo(s) selected`,true);}};
 
-/* ---------- upload flow ---------- */
-async function uploadFiles(){
-  const files=[...$('#file').files];
-  if(!files.length) return alert('Pick at least one file first!');
+$('#galleryBtn').onclick=()=>location.href='gallery.html';
+$('#uploadBtn').onclick  =()=>uploadAll();
 
-  $('#progressWrap').style.display='block'; setBar(0);
-  $('#send').disabled=true;
-
+async function uploadAll(){
+  const list=[...$('#file').files];
+  if(!list.length)return;
+  $('#progressWrap').style.display='block';bar(0);$('#uploadBtn').disabled=true;
   try{
-    for(let i=0;i<files.length;i++){
-      showMessage(`Uploading ${i+1} / ${files.length}… please wait`);
-      await uploadSingle(files[i]);
-      setBar((i+1)/files.length);
+    for(let i=0;i<list.length;i++){
+      say(`Uploading ${i+1}/${list.length}…`);
+      await send(list[i]);
+      bar((i+1)/list.length);
     }
-    showMessage('Thank you so much for celebrating with us. Lots of love, Adiba & Zac 🥰',true);
-    $('#file').value='';
-  }catch(err){
-    console.error(err);
-    showMessage('❌ Upload failed – please try again.');
-  }finally{
-    $('#send').disabled=false;
-  }
+    say('Thanks for sharing! 🎉',true);
+    $('#file').value='';$('#uploadBtn').disabled=true;
+  }catch(e){console.error(e);say('❌ Upload failed – please try again.');}
 }
 
-/* ---------- per-file upload ---------- */
-function downscaleImage(file,maxDim=2400,q=.85){
-  return new Promise((res,rej)=>{
-    const img=new Image();
-    img.onload=()=>{
-      let {width:w,height:h}=img;
-      if(w>h&&w>maxDim){ h*=maxDim/w; w=maxDim; }
-      else if(h>w&&h>maxDim){ w*=maxDim/h; h=maxDim; }
-      const c=document.createElement('canvas'); c.width=w; c.height=h;
-      c.getContext('2d').drawImage(img,0,0,w,h);
-      c.toBlob(b=>b?res(b):rej('toBlob failed'),'image/jpeg',q);
-    };
-    img.onerror=rej; img.src=URL.createObjectURL(file);
-  });
-}
-function blobToB64(blob){
-  return new Promise((res,rej)=>{
-    const fr=new FileReader();
-    fr.onload=()=>res(fr.result.split(',')[1]);
-    fr.onerror=rej; fr.readAsDataURL(blob);
-  });
-}
-async function uploadSingle(file){
-  let blob=file, name=file.name, type=file.type||'application/octet-stream';
-  if(file.type.startsWith('image/')){
-    blob = await downscaleImage(file);
-    name = name.replace(/\.[^/.]+$/,'')+'_web.jpg';
-    type = 'image/jpeg';
+const toB64=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(b);});
+async function send(file){
+  let blob=file,name=file.name,type=file.type||'application/octet-stream';
+  if(type.startsWith('image/')){
+    const img=await downscale(file);blob=img;name=name.replace(/\.[^/.]+$/,'')+'_web.jpg';type='image/jpeg';
   }
-  const b64 = await blobToB64(blob);
-  const body=new URLSearchParams({data:b64,filename:name,mimetype:type});
-  const res = await fetch(ENDPOINT,{method:'POST',body});
-  if(!res.ok) throw new Error(res.statusText);
+  const body=new URLSearchParams({data:await toB64(blob),filename:name,mimetype:type});
+  const r=await fetch(ENDPOINT,{method:'POST',body});
+  if(!r.ok)throw new Error(r.statusText);
 }
+function downscale(f,max=2400,q=.85){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>{let{width:w,height:h}=i;if(w>h&&w>max){h*=max/w;w=max}else if(h>max){w*=max/h;h=max}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(i,0,0,w,h);c.toBlob(b=>b?res(b):rej('toBlob fail'),'image/jpeg',q);};i.onerror=rej;i.src=URL.createObjectURL(f);});}
 </script>
 </body>
 </html>
