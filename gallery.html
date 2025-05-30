@@ -15,10 +15,7 @@
   .masonry{column-count:2;column-gap:.75rem;padding:0 1rem 2rem}
   @media(min-width:600px){.masonry{column-count:3}}
   @media(min-width:900px){.masonry{column-count:4}}
-  .masonry img{width:100%;margin:0 0 .75rem;border-radius:8px;box-shadow:0 2px 6px var(--shadow);cursor:pointer;transition:transform .25s;break-inside:avoid}
-  .masonry img:hover{transform:scale(1.03)}
-  #lightbox{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:1000}
-  #lightbox img{max-width:92vw;max-height:92vh;border-radius:12px;box-shadow:0 4px 16px #000}
+  .masonry img{width:100%;margin:0 0 .75rem;border-radius:8px;box-shadow:0 2px 6px var(--shadow);break-inside:avoid}
   #loading{text-align:center;margin:3rem 0;font-size:1.1rem}
 </style>
 
@@ -31,53 +28,41 @@
   <div id="loading">Loading photos…</div>
   <div id="gallery" class="masonry" hidden></div>
 
-  <div id="lightbox" onclick="this.style.display='none'"><img src="" alt=""></div>
-
 <script>
 /* ---------- CONFIG ---------- */
-const API_KEY   = 'AIzaSyBcvZnPlBzF4G3pMG07x5wqUR0ADiXuiVQ';                       //  ← replace
-const FOLDER_ID = '10IJzLTnmtDJKFBu4SE7c0p_G476TsBt_';        //  ← your folder
+const API_KEY   = 'AIzaSyBcvZnPlBzF4G3pMG07x5wqUR0ADiXuiVQ';                       //  ← insert your key
+const FOLDER_ID = '10IJzLTnmtDJKFBu4SE7c0p_G476TsBt_';        //  ← Drive folder
 
-/* Build URL-encoded Drive query */
+/* Drive query */
 const q = encodeURIComponent(`'${FOLDER_ID}' in parents and trashed=false`);
-const DRIVE_URL = `https://www.googleapis.com/drive/v3/files` +
-                  `?q=${q}` +
-                  `&fields=files(id,name,mimeType,thumbnailLink)` +
+const DRIVE_URL = `https://www.googleapis.com/drive/v3/files?` +
+                  `q=${q}&fields=files(id,name,mimeType,thumbnailLink)` +
                   `&pageSize=1000&key=${API_KEY}`;
 
 async function loadGallery(){
   try{
     const res = await fetch(DRIVE_URL);
     if(!res.ok) throw new Error(res.statusText);
-    const { files = [] } = await res.json();
+    const { files=[] } = await res.json();
 
-    const gal   = document.getElementById('gallery');
-    const light = document.querySelector('#lightbox img');
+    const gal=document.getElementById('gallery');
 
     files
-      .filter(f => f.mimeType.startsWith('image/'))
-      .forEach(f => {
-        /* Use Drive-generated thumbnail; on click load full-res */
-        const thumbSrc = f.thumbnailLink.replace(/=s.+$/, '=s800'); // bump size
-        const fullSrc  = `https://drive.google.com/uc?export=view&id=${f.id}`;
-
-        const img  = new Image();
-        img.src    = thumbSrc;
-        img.alt    = f.name;
+      .filter(f=>f.mimeType.startsWith('image/'))
+      .forEach(f=>{
+        const thumb = f.thumbnailLink.replace(/=s.+$/, '=s800'); // nicer size
+        const img   = new Image();
+        img.src = thumb;
+        img.alt = f.name;
         img.loading = 'lazy';
-        img.onclick = () => {
-          light.src = fullSrc;
-          document.getElementById('lightbox').style.display = 'flex';
-        };
         gal.appendChild(img);
       });
 
     document.getElementById('loading').remove();
-    gal.hidden = false;
+    gal.hidden=false;
   }catch(err){
     console.error(err);
-    document.getElementById('loading').textContent =
-      'Sorry – couldn’t load the gallery.';
+    document.getElementById('loading').textContent='Sorry – couldn’t load the gallery.';
   }
 }
 
